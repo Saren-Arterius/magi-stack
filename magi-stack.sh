@@ -144,15 +144,34 @@ drop_page_cache() {
   log "page cache dropped ($(free -g | awk '/Mem/{print $7}')G available)"
 }
 
+llm_gone() {  # abort guard for sequencing waits
+  llm_healthy && return 1
+  log "LLM died mid-sequencing — aborting (monitor will cascade)"
+  return 0
+}
+
 sequence_dependents() {
   log "sequencing dependents: vllm-q3asr -> voxcpm"
   drop_page_cache
   docker start vllm-q3asr >/dev/null 2>&1 || bash "$DIR/asr/run-q3asr.sh" 2>&1 | ts >>"$LOG"
-  wait_for asr_container_up vllm-q3asr 600 || return 1
-  until asr_warm; do log "vllm-q3asr: dora.wav probe not ready"; sleep $POLL; done
+  local t=0
+  until asr_container_up; do
+    llm_gone && return 1
+    t=$((t + POLL))
+    [ $t -ge 600 ] && { log "vllm-q3asr: not healthy after 600s"; return 1; }
+    sleep $POLL
+  done
+  log "vllm-q3asr: healthy"
+  until asr_warm; do
+    llm_gone && return 1
+    log "vllm-q3asr: dora.wav probe not ready"; sleep $POLL
+  done
   log "vllm-q3asr: warm (dora.wav ok)"
   start_vox
-  until vox_warm; do log "voxcpm: speech probe not ready"; sleep $POLL; done
+  until vox_warm; do
+    llm_gone && return 1
+    log "voxcpm: speech probe not ready"; sleep $POLL
+  done
   log "voxcpm: warm — full stack up"
 }
 
