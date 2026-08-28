@@ -100,7 +100,7 @@ stop_dependents() {
 }
 
 start_vox() {
-  setsid bash -c 'cd ~/magi-stack/voxcpm && NANOVLLM_SERVERPOOL_GPU_MEMORY_UTILIZATION=0.075 NANOVLLM_MODEL_PATH=openbmb/VoxCPM2 exec uv run fastapi run deployment/app/main.py --host 0.0.0.0 --port 8004' \
+  setsid bash -c 'cd ~/magi-stack/voxcpm/deployment && NANOVLLM_SERVERPOOL_GPU_MEMORY_UTILIZATION=0.075 NANOVLLM_MODEL_PATH=openbmb/VoxCPM2 exec uv run fastapi run app/main.py --host 0.0.0.0 --port 8004' \
     >>"$LOGDIR/voxcpm.log" 2>&1 &
   VOX_PGID=$!
   log "voxcpm started (pgid $VOX_PGID)"
