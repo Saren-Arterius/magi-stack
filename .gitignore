@@ -1,0 +1,8 @@
+# secrets
+.env
+# separate git repo (Saren-Arterius/qwen3.8-Flash-DGX-AutoRound + local commit)
+/llm/
+# separate project (own venv, moved from ~/nanovllm-voxcpm)
+/voxcpm/
+# vLLM compile cache (regenerated)
+/asr/vllm-cache/

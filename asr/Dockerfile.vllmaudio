@@ -1,0 +1,9 @@
+FROM vllm-sm121
+
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    uv pip install \
+        av==17.0.0 \
+        resampy==0.4.3 \
+        scipy==1.17.1 \
+        soundfile==0.13.1 \
+        soxr==1.0.0
