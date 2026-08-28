@@ -136,8 +136,17 @@ wait_llm_warm() {
   done
 }
 
+drop_page_cache() {
+  # GB10 unified memory: after the LLM load, ~all free RAM is clean page
+  # cache and CUDA context creation fails with OOM instead of reclaiming it.
+  sync
+  echo 1 | sudo tee /proc/sys/vm/drop_caches >/dev/null
+  log "page cache dropped ($(free -g | awk '/Mem/{print $7}')G available)"
+}
+
 sequence_dependents() {
   log "sequencing dependents: vllm-q3asr -> voxcpm"
+  drop_page_cache
   docker start vllm-q3asr >/dev/null 2>&1 || bash "$DIR/asr/run-q3asr.sh" 2>&1 | ts >>"$LOG"
   wait_for asr_container_up vllm-q3asr 600 || return 1
   until asr_warm; do log "vllm-q3asr: dora.wav probe not ready"; sleep $POLL; done
@@ -174,6 +183,7 @@ while :; do
     sequence_dependents
   elif ! asr_container_up; then
     log "ASR: unhealthy — restarting vllm-q3asr"
+    drop_page_cache
     docker restart vllm-q3asr >/dev/null 2>&1
     wait_for asr_container_up vllm-q3asr 600
   elif ! vox_healthy; then
