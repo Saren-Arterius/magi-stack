@@ -65,4 +65,7 @@ EOF
   (cd $MNT && stat -c '%n %s' ./*.safetensors | sort) | sudo tee $MARKER >/dev/null
 fi
 
+# preserve the previous container's logs before serve's docker rm -f
+docker logs --tail 500 qwen38-flash > /tmp/magi-stack-logs/llm-last-crash.log 2>&1 || true
+
 "$HOME/magi-stack/llm/serve-magi.sh"
