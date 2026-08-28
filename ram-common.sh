@@ -45,7 +45,7 @@ ensure_swap() {
   if ! sudo test -f $RAM_SWAPFILE; then
     local avail_kb swap_kb
     avail_kb=$(df --output=avail -k $RAM_MNT | tail -1)
-    swap_kb=$(( avail_kb - 1048576 ))
+    swap_kb=$(( avail_kb - 204800 ))  # ~200M slack; fs is static
     sudo fallocate -l ${swap_kb}K $RAM_SWAPFILE
     sudo chmod 600 $RAM_SWAPFILE
     sudo mkswap $RAM_SWAPFILE >/dev/null
