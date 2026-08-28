@@ -121,19 +121,31 @@ wait_for() {  # wait_for <probe_fn> <name> <timeout_secs>
 }
 
 wait_llm_warm() {
-  # LLM reloads take ~8 min; docker's unless-stopped does the restarting.
-  # If it never comes back (container removed, table gone), re-kick via
-  # ram-client-ple.sh and keep waiting. Dependents stay down throughout.
+  # LLM reloads take ~8 min; docker's unless-stopped does the restarting of a
+  # crashed container, so an EXISTING unhealthy container just needs waiting
+  # (up to WARM_TIMEOUT). A MISSING container will never come back on its
+  # own — re-kick ram-client-ple.sh immediately. Dependents stay down.
+  local t=0
   while :; do
-    if wait_for llm_healthy LLM "$WARM_TIMEOUT" && llm_warm; then
+    if ! docker inspect qwen38-flash >/dev/null 2>&1; then
+      log "LLM container missing — running ram-client-ple.sh"
+      run_ram_client || log "ram-client-ple.sh failed; retrying"
+      t=0
+    fi
+    if llm_healthy && llm_warm; then
       log "LLM: warm (real completion ok)"
       # flap guard: require it to stay healthy before spending dependents' boot
       sleep $STABLE_SECS
       llm_healthy && return 0
       log "LLM: died within ${STABLE_SECS}s of warmup — waiting again"
-    else
-      log "LLM: re-kicking via ram-client-ple.sh"
+      t=0
+    fi
+    sleep $POLL
+    t=$((t + POLL))
+    if [ $t -ge "$WARM_TIMEOUT" ]; then
+      log "LLM: not healthy after ${WARM_TIMEOUT}s — re-kicking ram-client-ple.sh"
       run_ram_client || log "ram-client-ple.sh failed; retrying"
+      t=0
     fi
   done
 }
