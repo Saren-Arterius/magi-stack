@@ -6,3 +6,4 @@
 /voxcpm/
 # vLLM compile cache (regenerated)
 /asr/vllm-cache/
+.supervisor.lock
