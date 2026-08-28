@@ -16,6 +16,7 @@ MARKER=$MNT/.table-complete
 [ -b $DEV ] || sudo nvme connect -t rdma -a 192.168.0.1 -s 4420 -n nvme-ram
 for _ in $(seq 30); do [ -b $DEV ] && break; sleep 1; done
 [ -b $DEV ] || { echo "$DEV never appeared"; exit 1; }
+echo 4 | sudo tee /sys/block/$(basename $DEV)/queue/read_ahead_kb >/dev/null  # tiny rows, no cache headroom: stop 128k readahead pollution
 
 # The marker is a manifest (file name + size per shard, written after a full
 # copy). table_ok() re-stats every shard against it on each boot, so a
