@@ -25,7 +25,7 @@ LOG=$LOGDIR/magi-stack.log
 DORA=$DIR/dora.wav
 POLL=10           # monitor interval, seconds
 WARM_TIMEOUT=1200 # max seconds to wait for LLM to come back before re-kicking
-STABLE_SECS=30    # LLM must stay healthy this long before dependents restart
+STABLE_SECS=10    # one extra poll after warm before spending dependents boot
 
 mkdir -p "$LOGDIR"
 
