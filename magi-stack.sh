@@ -29,13 +29,15 @@ STABLE_SECS=10    # one extra poll after warm before spending dependents boot
 
 mkdir -p "$LOGDIR"
 
-# Re-exec inside a detached screen session (one instance max).
+# Re-exec inside a detached screen session.
 if [ -z "$STY" ] && [ "${1:-}" != --no-screen ]; then
-  if screen -ls 2>/dev/null | grep -q '\.magi-stack\s'; then
-    echo "magi-stack screen session already running"; exit 1
-  fi
   exec screen -dmS magi-stack bash "$0" --no-screen
 fi
+
+# Hard single-instance guard: whoever holds the flock is THE supervisor;
+# any other copy (double launch, stale screen, ghost) exits immediately.
+exec 9>"$DIR/.supervisor.lock"
+flock -n 9 || { echo "another magi-stack holds the lock; exiting"; exit 1; }
 
 VOX_PGID=
 
