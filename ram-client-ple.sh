@@ -33,9 +33,9 @@ if mountpoint -q $MNT && ! sudo cat $MARKER >/dev/null 2>&1; then
 fi
 if ! mountpoint -q $MNT; then
   sudo mkdir -p $MNT
-  sudo mount $DEV $MNT 2>/dev/null || {
+  sudo mount -o noatime $DEV $MNT 2>/dev/null || {
     sudo mkfs.ext4 -F -m0 -O ^has_journal -T largefile4 $DEV
-    sudo mount $DEV $MNT
+    sudo mount -o noatime $DEV $MNT
   }
 fi
 
@@ -43,7 +43,7 @@ if ! table_ok; then
   # Wrong or partial contents: remake the fs so the copy always has space.
   sudo umount -f $MNT 2>/dev/null || true
   sudo mkfs.ext4 -F -m0 -O ^has_journal -T largefile4 $DEV
-  sudo mount $DEV $MNT
+  sudo mount -o noatime $DEV $MNT
   echo "rebuilding stripped PLE table from $SRC (~48G, a few min over NFS)..."
   ls "$SRC"/*.safetensors >/dev/null  # fail loudly if the NFS mount is absent
   # inline tools/strip_ple_table.py from the repo, to keep this self-contained
