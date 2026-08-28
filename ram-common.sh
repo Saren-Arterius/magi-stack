@@ -39,7 +39,7 @@ ensure_ram_fs() {
 }
 
 ensure_swap() {
-  # Swapfile fills whatever the table leaves free (~1G slack). Local SSD swap
+  # Swapfile fills whatever the table leaves free (~200M slack). Local SSD swap
   # stays enabled at its default (lower) priority: prio 100 here means the
   # kernel only touches the SSD when the remote fills or disappears.
   if ! sudo test -f $RAM_SWAPFILE; then
