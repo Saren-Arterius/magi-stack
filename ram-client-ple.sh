@@ -30,6 +30,7 @@ table_ok() {
 # A mount that survived a wtako reboot is backed by nothing and reads EIO;
 # the marker read doubles as the health probe.
 if mountpoint -q $MNT && ! sudo cat $MARKER >/dev/null 2>&1; then
+  sudo swapoff $MNT/swapfile 2>/dev/null || true
   sudo umount -f $MNT || true
 fi
 if ! mountpoint -q $MNT; then
@@ -42,6 +43,7 @@ fi
 
 if ! table_ok; then
   # Wrong or partial contents: remake the fs so the copy always has space.
+  sudo swapoff $MNT/swapfile 2>/dev/null || true
   sudo umount -f $MNT 2>/dev/null || true
   sudo mkfs.ext4 -F -m0 -O ^has_journal -T largefile4 $DEV
   sudo mount -o noatime $DEV $MNT
@@ -65,6 +67,19 @@ for i, p in enumerate(files):
 EOF
   (cd $MNT && stat -c '%n %s' ./*.safetensors | sort) | sudo tee $MARKER >/dev/null
 fi
+
+# Remote swap: fill the space left after the table with a swapfile on the
+# wtako-RAM fs, preferred (prio 100) over the local SSD swap files. Created
+# once per fs lifetime; the rebuild path above swapoffs + wipes it with mkfs.
+SWAPFILE=$MNT/swapfile
+if ! sudo test -f $SWAPFILE; then
+  avail_kb=$(df --output=avail -k $MNT | tail -1)
+  swap_kb=$(( avail_kb - 1048576 ))  # leave 1G slack for ext4/marker
+  sudo fallocate -l ${swap_kb}K $SWAPFILE
+  sudo chmod 600 $SWAPFILE
+  sudo mkswap $SWAPFILE
+fi
+swapon --show=NAME --noheadings | grep -qF "$SWAPFILE" || sudo swapon -p 100 $SWAPFILE
 
 # preserve the previous container's logs before serve's docker rm -f
 docker logs --tail 500 qwen38-flash > /tmp/magi-stack-logs/llm-last-crash.log 2>&1 || true
