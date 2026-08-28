@@ -100,6 +100,7 @@ stop_dependents() {
 }
 
 start_vox() {
+  drop_page_cache  # GB10: CUDA ctx creation OOMs when free RAM is all page cache
   setsid bash -c 'cd ~/magi-stack/voxcpm/deployment && NANOVLLM_SERVERPOOL_GPU_MEMORY_UTILIZATION=0.075 NANOVLLM_MODEL_PATH=openbmb/VoxCPM2 exec uv run fastapi run app/main.py --host 0.0.0.0 --port 8004' \
     >>"$LOGDIR/voxcpm.log" 2>&1 &
   VOX_PGID=$!
@@ -184,6 +185,7 @@ sequence_dependents() {
   start_vox
   until vox_warm; do
     llm_gone && return 1
+    kill -0 -- -"$VOX_PGID" 2>/dev/null || { log "voxcpm: process died — retrying"; start_vox; }
     log "voxcpm: speech probe not ready"; sleep $POLL
   done
   log "voxcpm: warm — full stack up"
