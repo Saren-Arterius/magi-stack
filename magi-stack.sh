@@ -166,6 +166,7 @@ llm_gone() {  # abort guard for sequencing waits
 }
 
 sequence_dependents() {
+  [ -e /tmp/magi-stack-no-deps ] && { log "deps held (/tmp/magi-stack-no-deps) — not starting ASR/voxcpm"; return 0; }
   log "sequencing dependents: vllm-q3asr -> voxcpm"
   drop_page_cache
   docker start vllm-q3asr >/dev/null 2>&1 || bash "$DIR/asr/run-q3asr.sh" 2>&1 | ts >>"$LOG"
@@ -211,6 +212,20 @@ sequence_dependents
 
 while :; do
   sleep $POLL
+  # Benchmark hold: `touch /tmp/magi-stack-no-deps` keeps ASR+voxcpm down so
+  # LLM perf tests get the GPU pool to themselves; `rm` it to restore (the
+  # normal unhealthy branches below bring them back). LLM stays managed.
+  if [ -e /tmp/magi-stack-no-deps ]; then
+    if asr_container_up || vox_healthy; then
+      log "hold file present — stopping dependents"
+      stop_dependents
+    fi
+    if ! llm_healthy; then
+      log "LLM: UNHEALTHY — reloading (dependents held)"
+      wait_llm_warm
+    fi
+    continue
+  fi
   if ! llm_healthy; then
     log "LLM: UNHEALTHY — cascading"
     stop_dependents
