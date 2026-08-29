@@ -82,10 +82,10 @@ vox_healthy() {
   curl -sf -o /dev/null --max-time 3 http://localhost:8004/docs
 }
 
-vox_warm() {  # start.sh's speech probe
-  curl -sf -o /dev/null --max-time 120 http://localhost:8004/v1/audio/speech \
+vox_warm() {  # real zero-shot generation (the app has no /v1/audio/speech route)
+  curl -sf -o /dev/null --max-time 120 -X POST http://localhost:8004/generate \
     -H 'Content-Type: application/json' \
-    -d '{"model":"openbmb/VoxCPM2","input":"おめでとう","voice":"default","stream":true}'
+    -d '{"target_text":"おめでとう"}'
 }
 
 # ---------------------------------------------------------------- actions
