@@ -39,13 +39,16 @@ ensure_ram_fs() {
 }
 
 ensure_swap() {
-  # Swapfile fills whatever the table leaves free (~200M slack). Local SSD swap
-  # stays enabled at its default (lower) priority: prio 100 here means the
-  # kernel only touches the SSD when the remote fills or disappears.
+  # Swapfile takes what the table leaves free, capped at 16G: an uncapped
+  # swapfile created before the table copy (boot race) ate the whole device
+  # once (2026-08-30) and blocked the rebuild. Local SSD swap stays enabled
+  # at its default (lower) priority: prio 100 here means the kernel only
+  # touches the SSD when the remote fills or disappears.
   if ! sudo test -f $RAM_SWAPFILE; then
     local avail_kb swap_kb
     avail_kb=$(df --output=avail -k $RAM_MNT | tail -1)
     swap_kb=$(( avail_kb - 204800 ))  # ~200M slack; fs is static
+    [ $swap_kb -gt $(( 16 * 1024 * 1024 )) ] && swap_kb=$(( 16 * 1024 * 1024 ))
     sudo fallocate -l ${swap_kb}K $RAM_SWAPFILE
     sudo chmod 600 $RAM_SWAPFILE
     sudo mkswap $RAM_SWAPFILE >/dev/null
