@@ -101,6 +101,11 @@ stop_dependents() {
 
 start_vox() {
   drop_page_cache  # GB10: CUDA ctx creation OOMs when free RAM is all page cache
+  # Cache drop alone stopped being enough (2026-08-30): balloon 16G of anon
+  # to force cold pages out to the RDMA swap, then release — voxcpm's CUDA
+  # ctx needs truly-free RAM, not reclaimable-maybe RAM.
+  python3 "$HOME/magi-stack/ram-balloon.py" 16 >>"$LOGDIR/voxcpm.log" 2>&1 || true
+  log "ram balloon done ($(free -g | awk '/Mem/{print $7}')G available)"
   setsid bash -c 'cd ~/magi-stack/voxcpm/deployment && NANOVLLM_SERVERPOOL_GPU_MEMORY_UTILIZATION=0.075 NANOVLLM_MODEL_PATH=openbmb/VoxCPM2 exec uv run fastapi run app/main.py --host 0.0.0.0 --port 8004' \
     >>"$LOGDIR/voxcpm.log" 2>&1 9>&- &
   VOX_PGID=$!
