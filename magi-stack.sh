@@ -245,5 +245,14 @@ while :; do
     log "voxcpm: unhealthy — restarting"
     stop_vox
     start_vox
+    # boot grace: without this the next monitor pass kills a still-loading
+    # voxcpm 10s in, forever (the flap loop of 2026-08-31)
+    vt=0
+    until vox_warm; do
+      llm_healthy || break
+      vt=$((vt + POLL))
+      [ $vt -ge 600 ] && { log "voxcpm: not warm after 600s"; break; }
+      log "voxcpm: speech probe not ready"; sleep $POLL
+    done
   fi
 done
