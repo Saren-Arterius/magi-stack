@@ -2,7 +2,8 @@
 # Bring up the remote-RAM swap device, wait for wtako's PLE RDMA daemon, then
 # start vLLM. Since the 2026-08-30 cutover the PLE table is NOT copied here:
 # vLLM reads rows straight out of wtako's RAM via one-sided RDMA READs
-# (ple-rdma-server.service on wtako, VLLM_PLE_RDMA in serve-magi.sh). The
+# (magi-v2: ple-nvfp4-rdma-server.service on wtako :18516, MBX_PLE_RDMA in
+# llm/v2/recipe.yaml; v1 was ple-rdma-server.service :18515). The
 # NVMe-oF RAM device (now 16G) is used raw as swap — no filesystem.
 # Called by magi-stack.sh whenever the LLM needs (re)creating; safe to re-run
 # by hand, but note it always (re)starts the qwen38-flash container.
@@ -14,8 +15,8 @@ ensure_ram_swap
 
 # vLLM aborts at boot if the table daemon is unreachable — wait here instead
 # so the supervisor's warm timeout isn't burned on a crash loop.
-until timeout 2 bash -c '</dev/tcp/192.168.0.1/18515' 2>/dev/null; do
-  echo "waiting for ple-rdma-server on wtako:18515..."
+until timeout 2 bash -c '</dev/tcp/192.168.0.1/18516' 2>/dev/null; do
+  echo "waiting for ple-nvfp4-rdma-server on wtako:18516..."
   sleep 5
 done
 
