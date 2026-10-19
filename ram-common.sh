@@ -25,5 +25,5 @@ ensure_ram_swap() {
     [ -b $RAM_DEV ] || { echo "$RAM_DEV never came back"; return 1; }
   fi
   [ "$(sudo blkid -o value -s TYPE $RAM_DEV 2>/dev/null)" = swap ] || sudo mkswap $RAM_DEV >/dev/null
-  swapon --show=NAME --noheadings | grep -qF "$RAM_DEV" || sudo swapon -p 100 $RAM_DEV
+  swapon --show=NAME --noheadings | grep -qF "$RAM_DEV" || sudo swapon -p 100 $RAM_DEV --fixpgsz
 }
